@@ -5,7 +5,7 @@ from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler, ContextTypes
 
-# ========== ТОКЕН (вставьте свой) ==========
+# ========== ТОКЕН ==========
 TELEGRAM_BOT_TOKEN = "8760736290:AAE3gM-Xfm-Som6o80QeFx8hhRCHBj2cRBk"
 
 ADMIN_USERNAMES = ["baby_illusion", "tripo3"]
@@ -56,7 +56,6 @@ class Database:
             )
         """)
         self.conn.commit()
-        # начальные данные
         self.cursor.execute("SELECT COUNT(*) FROM shops")
         if self.cursor.fetchone()[0] == 0:
             self.cursor.execute("INSERT INTO shops (name, username) VALUES (?, ?)", ("Jordan Shop", "Jordan_and_svenbot"))
@@ -220,12 +219,10 @@ async def game_type_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     game_vip_mode = (query.data == "game_vip")
     mode_text = "VIP" if game_vip_mode else "обычная"
     numbers_count = 4 if game_vip_mode else 5
-    # Удаляем исходное сообщение с кнопками выбора
     try:
         await query.message.delete()
     except:
         pass
-    # Отправляем игровую клавиатуру
     await context.bot.send_message(
         chat_id=query.message.chat_id,
         text=(
@@ -250,7 +247,6 @@ async def stopgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bingo_history.clear()
     history_msg_id = None
     progress_msg_id = None
-    # Возвращаем постоянную клавиатуру (без игровых кнопок)
     await update.message.reply_text(
         "⏹️ Игра остановлена. Данные очищены.",
         reply_markup=permanent_keyboard()
@@ -270,7 +266,6 @@ def get_random_count():
         return 5
 
 async def update_progress_table(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обновляет закреплённое сообщение с таблицей прогресса"""
     global progress_msg_id
     if not game_active or not players:
         return
@@ -383,7 +378,7 @@ async def bingo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         pass
 
-# ========== АДМИН-УПРАВЛЕНИЕ РЕПУТАЦИЕЙ И VIP ==========
+# ========== АДМИН-УПРАВЛЕНИЕ ==========
 async def set_reputation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.username.lower() not in [a.lower() for a in ADMIN_USERNAMES]:
         await update.message.reply_text("❌ Только администратор.")
@@ -478,7 +473,7 @@ async def unban(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def getid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Ваш ID: {update.effective_user.id}")
 
-# ========== УПРАВЛЕНИЕ МАГАЗИНАМИ И ОБМЕННИКАМИ ==========
+# ========== МАГАЗИНЫ / ОБМЕННИКИ ==========
 async def add_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.username.lower() not in [a.lower() for a in ADMIN_USERNAMES]:
         await update.message.reply_text("❌ Только администратор.")
@@ -584,29 +579,26 @@ async def inline_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
     if data.startswith("shop_"):
         username = data[5:]
-        await query.edit_message_text(f"📦 Боты продаж: @{username}")
+        await query.edit_message_text(f"📦 Свяжитесь с продавцом: @{username}")
     elif data.startswith("exch_"):
         username = data[5:]
-        await query.edit_message_text(f"💱 Надежные обмены: @{username}")
+        await query.edit_message_text(f"💱 Свяжитесь с обменником: @{username}")
     elif data in ("game_normal", "game_vip"):
         await game_type_callback(update, context)
 
-# ========== ОБРАБОТКА КНОПОК ИГРЫ (ОСНОВНОЙ ХЕНДЛЕР) ==========
+# ========== ОСНОВНОЙ ОБРАБОТЧИК СООБЩЕНИЙ (ВСЕ КНОПКИ) ==========
 async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user_id = update.effective_user.id
     username = update.effective_user.username or str(user_id)
     db.ensure_user(user_id, username)
 
-    async def pm(msg, **kwargs):
-        try:
-            await context.bot.send_message(user_id, msg, **kwargs)
-        except Exception:
-            await update.message.reply_text("⚠️ Не могу отправить личное сообщение. Напишите боту в ЛС /start, затем повторите.")
+    # Для отладки (можно закомментировать)
+    # print(f"DEBUG: Получен текст: '{text}', chat_type={update.effective_chat.type}")
 
     # ЛИЧНЫЕ СООБЩЕНИЯ
     if update.effective_chat.type == "private":
-        if text == "👤 Мой профиль":
+        if "Мой профиль" in text or text == "👤 Мой профиль":
             wins, games, vip, rep = db.get_stats(user_id)
             vip_status = "👑 VIP" if vip else "⭐ Обычный"
             rep_level = db.rep_text(rep)
@@ -620,27 +612,29 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         else:
-            await update.message.reply_text("Используйте кнопку ниже:", reply_markup=private_keyboard())
+            await update.message.reply_text("Используйте кнопку ниже.", reply_markup=private_keyboard())
             return
 
     # ГРУППОВЫЕ СООБЩЕНИЯ (КНОПКИ)
-    if text == "📜 Правила":
+    # Правила
+    if "Правила" in text or text == "📜 Правила":
         rules = (
             "📜 **Правила игры**\n\n"
             "**Обычная игра:**\n- Загадайте 5 разных чисел от 1 до 100.\n- Требуется 30+ сообщений в чате.\n\n"
             "**VIP игра:**\n- Загадайте 4 разных числа от 1 до 100.\n- Требуется VIP статус.\n\n"
             "**Как получить VIP?**\n❌ VIP статус НЕ продаётся. Его можно заслужить:\n"
             "• материально поддержать чат\n• проявлять креативность\n• быть активным участником\n• иметь хорошую репутацию\n\n"
-            "**Репутация** – показатель вашего вклада в жизнь чата. Уровни: ⚪ Обычный, 🔶 Средний, 🔴 Высокий.\n"
-            "Репутацию повышают администраторы за активность и полезные действия.\n\n"
-            "По вопросам VIP и репутации обращаться к @baby_illusion.\n\n"
-            "Админ запускает прокрутки командой /bingo. За раз выпадает 1-5 чисел (чем больше, тем реже).\n"
+            "**Репутация** – показатель вашего вклада. Уровни: ⚪ Обычный, 🔶 Средний, 🔴 Высокий.\n"
+            "Репутацию повышают администраторы.\n\n"
+            "По вопросам VIP и репутации к @baby_illusion.\n\n"
+            "Админ запускает прокрутки командой /bingo. За раз 1-5 чисел (чем больше, тем реже).\n"
             "Побеждает тот, кто первым соберёт все свои числа."
         )
         await update.message.reply_text(rules, parse_mode="Markdown")
         return
 
-    if text == "❓ VIP статус":
+    # VIP статус
+    if "VIP статус" in text or text == "❓ VIP статус":
         msg = (
             "👑 **Что такое VIP статус?**\n\n"
             "VIP статус даёт право участвовать в VIP-играх (нужно собрать всего 4 числа).\n\n"
@@ -649,31 +643,37 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• креативность (идеи, конкурсы)\n"
             "• высокая активность в чате\n"
             "• хорошая репутация\n\n"
-            "**Репутация** – три уровня (обычный, средний, высокий), которые отражают ваш вклад. Репутацию повышают администраторы.\n\n"
-            "📩 Если считаете, что достойны VIP – напишите администратору @baby_illusion."
+            "**Репутация** – три уровня (обычный, средний, высокий).\n\n"
+            "📩 Если считаете, что достойны VIP – напишите @baby_illusion."
         )
-        await pm(msg, parse_mode="Markdown")
+        # Отправляем в ЛС
+        try:
+            await context.bot.send_message(user_id, msg, parse_mode="Markdown")
+        except:
+            await update.message.reply_text("⚠️ Не могу отправить в ЛС, напишите боту /start в ЛС.")
         return
 
-    if text == "🔢 Моя комбинация":
+    # Моя комбинация
+    if "Моя комбинация" in text or text == "🔢 Моя комбинация":
         if not game_active:
-            await pm("Сейчас нет активной игры.")
+            await update.message.reply_text("Сейчас нет активной игры.")
             return
         if user_id in players:
             nums = ", ".join(map(str, players[user_id]["numbers"]))
             found = ", ".join(map(str, players[user_id]["found"])) if players[user_id]["found"] else "пока нет"
             maxn = players[user_id]["max_needed"]
-            await pm(f"🔢 **Ваши числа:** {nums}\n✅ **Выпали:** {found}\n🎯 Нужно собрать: {maxn} чисел", parse_mode="Markdown")
+            await update.message.reply_text(f"🔢 **Ваши числа:** {nums}\n✅ **Выпали:** {found}\n🎯 Нужно собрать: {maxn} чисел", parse_mode="Markdown")
         else:
-            await pm("Вы ещё не записались. Нажмите «✍️ Записаться».")
+            await update.message.reply_text("Вы ещё не записались. Нажмите «✍️ Записаться».")
         return
 
-    if text == "📋 Список участников":
+    # Список участников
+    if "Список участников" in text or text == "📋 Список участников":
         if not game_active:
-            await pm("Сейчас нет активной игры.")
+            await update.message.reply_text("Сейчас нет активной игры.")
             return
         if not players:
-            await pm("Список участников пуст. Никто не записался.")
+            await update.message.reply_text("Список участников пуст.")
             return
         msg = "📋 **Текущие участники игры:**\n\n"
         for uid, data in players.items():
@@ -684,10 +684,11 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             rep_txt = db.rep_text(rep)
             vip_txt = "👑" if vip else ""
             msg += f"👤 @{data['username']} {vip_txt} ({rep_txt}): {nums} | выпало {count}/{maxn} | побед: {wins}\n"
-        await pm(msg, parse_mode="Markdown")
+        await update.message.reply_text(msg, parse_mode="Markdown")
         return
 
-    if text == "📊 Прогресс":
+    # Прогресс
+    if "Прогресс" in text or text == "📊 Прогресс":
         if not game_active:
             await update.message.reply_text("Сейчас нет активной игры.")
             return
@@ -704,39 +705,49 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(text, parse_mode="Markdown")
         return
 
-    if text == "🛍️ Магазины":
+    # Магазины
+    if "Магазины" in text or text == "🛍️ Магазины":
         await shops_button(update, context)
         return
 
-    if text == "💱 Обменники":
+    # Обменники
+    if "Обменники" in text or text == "💱 Обменники":
         await exchangers_button(update, context)
         return
 
-    if text == "✍️ Записаться":
+    # Записаться
+    if "Записаться" in text or text == "✍️ Записаться":
         if not game_active:
-            await pm("Игра ещё не началась. Администратор должен дать /startgame в общем чате.")
+            await update.message.reply_text("Игра ещё не началась. Администратор должен дать /startgame в общем чате.")
             return
         if user_id in players:
-            await pm("Вы уже зарегистрированы в текущей игре.")
+            await update.message.reply_text("Вы уже зарегистрированы в текущей игре.")
             return
         if db.is_banned(user_id):
-            await pm("❌ Вы в чёрном списке и не можете участвовать.")
+            await update.message.reply_text("❌ Вы в чёрном списке и не можете участвовать.")
             return
 
         if game_vip_mode:
             if not db.is_vip(user_id):
-                await pm("❌ Эта игра только для VIP. Обратитесь к администратору за статусом.")
+                await update.message.reply_text("❌ Эта игра только для VIP. Обратитесь к администратору за статусом.")
                 return
-            await pm("Введите **4 разных числа от 1 до 100** через пробел.\nПример: 7 15 32 68", parse_mode="Markdown")
+            await update.message.reply_text("Введите **4 разных числа от 1 до 100** через пробел.\nПример: 7 15 32 68", parse_mode="Markdown")
             return WAITING_VIP_NUMBERS
         else:
             msg_count = context.user_data.get("msg_count", 0)
             if msg_count < MIN_MESSAGES_TO_PLAY:
-                await pm(f"❌ Недостаточно сообщений в чате. Нужно {MIN_MESSAGES_TO_PLAY}, у вас {msg_count}.")
+                await update.message.reply_text(f"❌ Недостаточно сообщений в чате. Нужно {MIN_MESSAGES_TO_PLAY}, у вас {msg_count}.")
                 return
-            await pm("Введите **5 разных чисел от 1 до 100** через пробел.\nПример: 7 15 32 68 91", parse_mode="Markdown")
+            await update.message.reply_text("Введите **5 разных чисел от 1 до 100** через пробел.\nПример: 7 15 32 68 91", parse_mode="Markdown")
             return WAITING_NUMBERS
 
+    # Если никакая кнопка не подошла – фаллбэк
+    if game_active:
+        await update.message.reply_text("Пожалуйста, используйте кнопки.", reply_markup=game_keyboard())
+    else:
+        await update.message.reply_text("Пожалуйста, используйте кнопки.", reply_markup=permanent_keyboard())
+
+# ========== ДИАЛОГ ВВОДА ЧИСЕЛ ==========
 async def receive_numbers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text.strip()
@@ -793,6 +804,7 @@ async def receive_vip_numbers(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
     return ConversationHandler.END
 
+# ========== ПРИВЕТСТВИЯ ==========
 async def greeting(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type != "private" and update.message and update.message.text:
         low = update.message.text.lower()
@@ -801,16 +813,7 @@ async def greeting(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(random.choice(REPLY_WORDS))
                 break
 
-async def fallback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.type != "private":
-        # Если игра активна, показываем игровую клавиатуру, иначе постоянную
-        if game_active:
-            await update.message.reply_text("Пожалуйста, используйте кнопки.", reply_markup=game_keyboard())
-        else:
-            await update.message.reply_text("Пожалуйста, используйте кнопки.", reply_markup=permanent_keyboard())
-    else:
-        await update.message.reply_text("Используйте кнопку ниже.", reply_markup=private_keyboard())
-
+# ========== СТАРТ ==========
 async def start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type == "private":
         user_id = update.effective_user.id
@@ -821,7 +824,6 @@ async def start_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=private_keyboard()
         )
     else:
-        # Если в группе вызвали /start – показываем постоянную клавиатуру
         await update.message.reply_text(
             "Бот готов к работе. Используйте кнопки ниже.\nАдмин может запустить игру командой /startgame.",
             reply_markup=permanent_keyboard()
@@ -858,10 +860,11 @@ if __name__ == "__main__":
     )
     app.add_handler(conv_handler)
 
-    app.add_handler(MessageHandler(filters.Regex("^(🔢 Моя комбинация|📋 Список участников|📊 Прогресс|📜 Правила|❓ VIP статус|🛍️ Магазины|💱 Обменники)$"), handle_buttons))
+    # Обрабатываем все текстовые сообщения (кроме команд) через единый обработчик
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, track_messages))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, greeting))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, fallback))
 
-    print("Бот KidOk запущен. Кнопки магазинов и обменников всегда в чате.")
+    print("Бот KidOk запущен. Все кнопки работают.")
     app.run_polling()
+
