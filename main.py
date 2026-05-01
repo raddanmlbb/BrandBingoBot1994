@@ -584,10 +584,10 @@ async def inline_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
     if data.startswith("shop_"):
         username = data[5:]
-        await query.edit_message_text(f"📦 Свяжитесь с продавцом: @{username}")
+        await query.edit_message_text(f"📦 Боты продаж: @{username}")
     elif data.startswith("exch_"):
         username = data[5:]
-        await query.edit_message_text(f"💱 Свяжитесь с обменником: @{username}")
+        await query.edit_message_text(f"💱 Надежные обмены: @{username}")
     elif data in ("game_normal", "game_vip"):
         await game_type_callback(update, context)
 
