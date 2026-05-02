@@ -7,7 +7,7 @@ from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboard
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler, ContextTypes
 
 # ========== ТОКЕН ==========
-TELEGRAM_BOT_TOKEN = "8760736290:AAGCLht6jJlHKA0uJbZsEnbNobhbk2nzI_s"
+TELEGRAM_BOT_TOKEN = "8760736290:AAE3gM-Xfm-Som6o80QeFx8hhRCHBj2cRBk"
 
 ADMIN_USERNAMES = ["baby_illusion", "borzata174"]
 MIN_MESSAGES_TO_PLAY = 30
