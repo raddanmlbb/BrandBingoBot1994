@@ -962,9 +962,11 @@ async def set_commands(app):
     ])
 
 # ========== ЗАПУСК ==========
+async def post_init(application):
+    await set_commands(application)
+
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-    app.job_queue.run_once(lambda _: set_commands(app), 0)
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
 
     app.add_handler(CommandHandler("start", start_private))
     app.add_handler(CommandHandler("startgame", startgame))
@@ -1000,5 +1002,5 @@ if __name__ == "__main__":
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, track_messages))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, greeting))
 
-    print("Бот KidOk запущен. Множественная победа корректно обрабатывается (один победитель).")
+    print("Бот KidOk запущен. Ошибка job_queue устранена, команды установлены через post_init.")
     app.run_polling()
