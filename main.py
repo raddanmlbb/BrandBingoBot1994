@@ -7,10 +7,9 @@ from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboard
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler, ContextTypes
 
 # ========== ТОКЕН ==========
-TELEGRAM_BOT_TOKEN = "8760736290:AAE3gM-Xfm-Som6o80QeFx8hhRCHBj2cRBk"
+TELEGRAM_BOT_TOKEN = "8760736290:AAGCLht6jJlHKA0uJbZsEnbNobhbk2nzI_s"
 
-ADMIN_USERNAMES = ["baby_illusion", "tripo3"]
-MIN_MESSAGES_TO_PLAY = 30
+ADMIN_USERNAMES = ["baby_illusion", "borzata174"]
 TRIGGER_WORDS = ["привет", "как ты", "салам"]
 REPLY_WORDS = ["Привет 👋", "Салам 🤝", "Здорова 😎"]
 
@@ -48,8 +47,7 @@ class Database:
                 games_played INTEGER DEFAULT 0,
                 vip INTEGER DEFAULT 0,
                 reputation INTEGER DEFAULT 0,
-                donations INTEGER DEFAULT 0,
-                msg_count_total INTEGER DEFAULT 0
+                donations INTEGER DEFAULT 0
             )
         """)
         self.cursor.execute("""
@@ -95,7 +93,6 @@ class Database:
         achievements = [
             ("Первая кровь", "Одержать первую победу", "🩸"),
             ("Массовик", "Одержать 5 побед", "📢"),
-            ("Аксакал", "Написать 1000 сообщений в чате", "🧓"),
             ("Друг чата", "Пригласить 3 друзей", "🤝"),
             ("VIP", "Получить VIP статус", "👑"),
             ("Топ донатер", "Проспонсировать 3 игры", "💰")
@@ -186,18 +183,10 @@ class Database:
         self.cursor.execute("UPDATE users SET games_played = games_played + 1 WHERE user_id = ?", (user_id,))
         self.conn.commit()
 
-    def inc_msg_count(self, user_id):
-        self.cursor.execute("UPDATE users SET msg_count_total = msg_count_total + 1 WHERE user_id = ?", (user_id,))
-        self.conn.commit()
-        self.cursor.execute("SELECT msg_count_total FROM users WHERE user_id = ?", (user_id,))
-        total = self.cursor.fetchone()[0]
-        if total >= 1000:
-            self.unlock_achievement(user_id, "Аксакал")
-
     def get_stats(self, user_id):
-        self.cursor.execute("SELECT wins, games_played, vip, reputation, msg_count_total FROM users WHERE user_id = ?", (user_id,))
+        self.cursor.execute("SELECT wins, games_played, vip, reputation FROM users WHERE user_id = ?", (user_id,))
         row = self.cursor.fetchone()
-        return row if row else (0,0,0,0,0)
+        return row if row else (0,0,0,0)
 
     def get_shops(self):
         self.cursor.execute("SELECT name, username FROM shops")
@@ -244,7 +233,7 @@ bingo_history = []
 history_msg_id = None
 progress_msg_id = None
 
-# ========== КЛАВИАТУРЫ (без style для совместимости) ==========
+# ========== КЛАВИАТУРЫ ==========
 def permanent_keyboard():
     btn_shop = KeyboardButton("🛍️ Магазины")
     btn_exch = KeyboardButton("💱 Обменники")
@@ -269,12 +258,6 @@ def private_keyboard():
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # ========== Вспомогательные функции ==========
-async def track_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.type != "private":
-        user_id = update.effective_user.id
-        context.user_data["msg_count"] = context.user_data.get("msg_count", 0) + 1
-        db.inc_msg_count(user_id)
-
 def get_random_count():
     r = random.random() * 100
     if r < 65: return 1
@@ -311,7 +294,7 @@ async def game_type_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     history_msg_id = None
     progress_msg_id = None
     game_vip_mode = (query.data == "game_vip")
-    registration_open = True   # новая игра – регистрация открыта
+    registration_open = True
     mode_text = "VIP" if game_vip_mode else "обычная"
     numbers_count = 4 if game_vip_mode else 5
     try:
@@ -326,7 +309,6 @@ async def game_type_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             f"Нажмите кнопку «🎰 БИНГО» и выберите действие.\n"
             f"Ответы бот будет присылать в личные сообщения.\n"
             f"{'Для VIP требуется VIP статус. ' if game_vip_mode else ''}"
-            f"Для участия в обычной игре нужно иметь {MIN_MESSAGES_TO_PLAY}+ сообщений в чате."
         ),
         reply_markup=game_keyboard(),
         parse_mode="Markdown"
@@ -420,10 +402,9 @@ async def bingo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     winners = [(uid, data["username"]) for uid,data in players.items() if len(data["found"])==data["max_needed"]]
 
     if winners:
-        # Выбираем только одного победителя
         winner_uid, winner_uname = random.choice(winners)
         db.add_win(winner_uid)
-        wins, _, vip, rep, _ = db.get_stats(winner_uid)
+        wins, _, vip, rep = db.get_stats(winner_uid)
         rep_txt = db.rep_text(rep)
         vip_txt = "👑 VIP " if vip else ""
         await update.message.reply_text(
@@ -729,10 +710,6 @@ async def handle_register(message, context, user_id):
         await context.bot.send_message(user_id, "Введите **4 разных числа от 1 до 100** через пробел.\nПример: 7 15 32 68", parse_mode="Markdown")
         return WAITING_VIP_NUMBERS
     else:
-        msg_count = context.user_data.get("msg_count", 0)
-        if msg_count < MIN_MESSAGES_TO_PLAY:
-            await context.bot.send_message(user_id, f"❌ Нужно {MIN_MESSAGES_TO_PLAY} сообщений в чате, у вас {msg_count}.")
-            return
         await context.bot.send_message(user_id, "Введите **5 разных чисел от 1 до 100** через пробел.\nПример: 7 15 32 68 91", parse_mode="Markdown")
         return WAITING_NUMBERS
 
@@ -754,7 +731,7 @@ async def handle_players_list(message, context, user_id):
         nums = ", ".join(map(str, data["numbers"]))
         count = len(data["found"])
         need = data["max_needed"]
-        wins,_,vip,rep,_ = db.get_stats(uid)
+        wins,_,vip,rep = db.get_stats(uid)
         rep_txt=db.rep_text(rep)
         vip_txt="👑" if vip else ""
         msg += f"👤 @{data['username']} {vip_txt} ({rep_txt}): {nums} | выпало {count}/{need} | побед: {wins}\n"
@@ -784,7 +761,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Личные сообщения
     if update.effective_chat.type == "private":
         if text == "👤 Мой профиль":
-            wins, games, vip, rep, msg_count_total = db.get_stats(user_id)
+            wins, games, vip, rep = db.get_stats(user_id)
             vip_status = "👑 VIP" if vip else "⭐ Обычный"
             rep_level = db.rep_text(rep)
             percent = round(wins / games * 100, 1) if games > 0 else 0
@@ -794,8 +771,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Репутация: {rep_level}\n"
                 f"🏆 Побед: {wins}\n"
                 f"🎲 Сыграно игр: {games}\n"
-                f"📈 Процент побед: {percent}%\n"
-                f"💬 Сообщений в чате: {msg_count_total}",
+                f"📈 Процент побед: {percent}%",
                 parse_mode="Markdown"
             )
             return
@@ -819,7 +795,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "📜 Правила" or text == "Правила":
         rules = (
             "📜 **Правила игры**\n\n"
-            "**Обычная игра:**\n- Загадайте 5 разных чисел от 1 до 100.\n- Требуется 30+ сообщений в чате.\n\n"
+            "**Обычная игра:**\n- Загадайте 5 разных чисел от 1 до 100.\n\n"
             "**VIP игра:**\n- Загадайте 4 разных числа от 1 до 100.\n- Требуется VIP статус.\n\n"
             "**Как получить VIP?**\n❌ VIP статус НЕ продаётся. Его можно заслужить:\n"
             "• материальная поддержка чата\n• проявлять креативность\n• быть активным участником\n• иметь хорошую репутацию\n\n"
@@ -828,7 +804,6 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "**Достижения (ачивки):**\n"
             "🩸 Первая кровь – первая победа.\n"
             "📢 Массовик – 5 побед.\n"
-            "🧓 Аксакал – 1000 сообщений в чате.\n"
             "🤝 Друг чата – пригласить 3 друзей (в разработке).\n"
             "👑 VIP – получение VIP статуса.\n"
             "💰 Топ донатер – проспонсировать 3 игры.\n\n"
@@ -964,7 +939,6 @@ async def set_commands(app):
 # ========== ЗАПУСК ==========
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-    # Устанавливаем команды после старта
     async def post_init(application):
         await set_commands(application)
     app.post_init = post_init
@@ -1000,8 +974,8 @@ if __name__ == "__main__":
     app.add_handler(conv_handler)
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, track_messages))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, greeting))
 
-    print("Бот KidOk запущен. Регистрация закрывается после первого /bingo.")
+    print("Бот KidOk запущен. Без счётчика сообщений. Регистрация закрывается после первого /bingo.")
     app.run_polling()
+
