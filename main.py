@@ -9,7 +9,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 # ========== ТОКЕН ==========
 TELEGRAM_BOT_TOKEN = "8760736290:AAE3gM-Xfm-Som6o80QeFx8hhRCHBj2cRBk"
 
-ADMIN_USERNAMES = ["baby_illusion", "borzata174"]
+ADMIN_USERNAMES = ["baby_illusion", "tripo3"]
 MIN_MESSAGES_TO_PLAY = 30
 TRIGGER_WORDS = ["привет", "как ты", "салам"]
 REPLY_WORDS = ["Привет 👋", "Салам 🤝", "Здорова 😎"]
@@ -239,20 +239,18 @@ db = Database()
 players = {}
 game_active = False
 game_vip_mode = False
+registration_open = True
 bingo_history = []
 history_msg_id = None
 progress_msg_id = None
 
-# ========== КЛАВИАТУРЫ ==========
+# ========== КЛАВИАТУРЫ (без style для совместимости) ==========
 def permanent_keyboard():
     btn_shop = KeyboardButton("🛍️ Магазины")
     btn_exch = KeyboardButton("💱 Обменники")
     btn_rules = KeyboardButton("📜 Правила")
     btn_vip = KeyboardButton("❓ VIP статус")
-    keyboard = [
-        [btn_shop, btn_exch],
-        [btn_rules, btn_vip],
-    ]
+    keyboard = [[btn_shop, btn_exch], [btn_rules, btn_vip]]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def game_keyboard():
@@ -261,11 +259,7 @@ def game_keyboard():
     btn_exch = KeyboardButton("💱 Обменники")
     btn_rules = KeyboardButton("📜 Правила")
     btn_vip = KeyboardButton("❓ VIP статус")
-    keyboard = [
-        [btn_bingo, btn_shop],
-        [btn_exch, btn_rules],
-        [btn_vip],
-    ]
+    keyboard = [[btn_bingo, btn_shop], [btn_exch, btn_rules], [btn_vip]]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def private_keyboard():
@@ -310,13 +304,14 @@ async def startgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def game_type_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    global game_active, players, bingo_history, history_msg_id, progress_msg_id, game_vip_mode
+    global game_active, players, bingo_history, history_msg_id, progress_msg_id, game_vip_mode, registration_open
     game_active = True
     players.clear()
     bingo_history.clear()
     history_msg_id = None
     progress_msg_id = None
     game_vip_mode = (query.data == "game_vip")
+    registration_open = True   # новая игра – регистрация открыта
     mode_text = "VIP" if game_vip_mode else "обычная"
     numbers_count = 4 if game_vip_mode else 5
     try:
@@ -341,12 +336,13 @@ async def stopgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.username.lower() not in [a.lower() for a in ADMIN_USERNAMES]:
         await update.message.reply_text("❌ Только администратор.")
         return
-    global game_active, players, bingo_history, history_msg_id, progress_msg_id
+    global game_active, players, bingo_history, history_msg_id, progress_msg_id, registration_open
     game_active = False
     players.clear()
     bingo_history.clear()
     history_msg_id = None
     progress_msg_id = None
+    registration_open = False
     await update.message.reply_text(
         "⏹️ Игра остановлена. Данные очищены.",
         reply_markup=permanent_keyboard()
@@ -393,6 +389,11 @@ async def bingo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Нет участников. Пусть нажмут «🎰 БИНГО» → «Записаться».")
         return
 
+    global registration_open
+    if registration_open:
+        registration_open = False
+        await update.message.reply_text("🚫 Регистрация закрыта! Новые участники больше не принимаются.")
+
     count = get_random_count()
     numbers = [random.randint(1,100) for _ in range(count)]
     numbers_str = ", ".join(str(n) for n in numbers)
@@ -419,19 +420,16 @@ async def bingo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     winners = [(uid, data["username"]) for uid,data in players.items() if len(data["found"])==data["max_needed"]]
 
     if winners:
-        # Выбираем ТОЛЬКО ОДНОГО победителя (случайно)
+        # Выбираем только одного победителя
         winner_uid, winner_uname = random.choice(winners)
-        # Начисляем победу выбранному
         db.add_win(winner_uid)
         wins, _, vip, rep, _ = db.get_stats(winner_uid)
         rep_txt = db.rep_text(rep)
         vip_txt = "👑 VIP " if vip else ""
-        # Сообщение в общий чат
         await update.message.reply_text(
             f"🏆 **Победитель @{winner_uname}!** ({vip_txt}{rep_txt})\n🎉 Всего побед: {wins}\nИгра окончена.",
             parse_mode="Markdown"
         )
-        # Челябинское поздравление в личку
         try:
             phrase = random.choice(CHELYABINSK_WIN_PHRASES)
             await context.bot.send_message(
@@ -441,7 +439,6 @@ async def bingo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         except Exception as e:
             print(f"Не удалось отправить поздравление: {e}")
-        # Всем остальным (включая других из winners, если были) добавляем только проигранную игру
         for uid in players:
             if uid != winner_uid:
                 db.add_game(uid)
@@ -719,6 +716,9 @@ async def handle_register(message, context, user_id):
     if user_id in players:
         await context.bot.send_message(user_id, "Вы уже зарегистрированы в текущей игре.")
         return
+    if not registration_open:
+        await context.bot.send_message(user_id, "Регистрация на эту игру уже закрыта. Ждите следующую.")
+        return
     if db.is_banned(user_id):
         await context.bot.send_message(user_id, "❌ Вы в чёрном списке и не можете участвовать.")
         return
@@ -962,11 +962,12 @@ async def set_commands(app):
     ])
 
 # ========== ЗАПУСК ==========
-async def post_init(application):
-    await set_commands(application)
-
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    # Устанавливаем команды после старта
+    async def post_init(application):
+        await set_commands(application)
+    app.post_init = post_init
 
     app.add_handler(CommandHandler("start", start_private))
     app.add_handler(CommandHandler("startgame", startgame))
@@ -1002,5 +1003,5 @@ if __name__ == "__main__":
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, track_messages))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, greeting))
 
-    print("Бот KidOk запущен. Ошибка job_queue устранена, команды установлены через post_init.")
+    print("Бот KidOk запущен. Регистрация закрывается после первого /bingo.")
     app.run_polling()
