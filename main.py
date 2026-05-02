@@ -245,8 +245,8 @@ progress_msg_id = None
 
 # ========== КЛАВИАТУРЫ ==========
 def permanent_keyboard():
-    btn_shop = KeyboardButton("🛍️ Магазины", style="success")
-    btn_exch = KeyboardButton("💱 Обменники", style="success")
+    btn_shop = KeyboardButton("🛍️ Магазины")
+    btn_exch = KeyboardButton("💱 Обменники")
     btn_rules = KeyboardButton("📜 Правила")
     btn_vip = KeyboardButton("❓ VIP статус")
     keyboard = [
@@ -256,9 +256,9 @@ def permanent_keyboard():
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def game_keyboard():
-    btn_bingo = KeyboardButton("🎰 БИНГО", style="success")
-    btn_shop = KeyboardButton("🛍️ Магазины", style="success")
-    btn_exch = KeyboardButton("💱 Обменники", style="success")
+    btn_bingo = KeyboardButton("🎰 БИНГО")
+    btn_shop = KeyboardButton("🛍️ Магазины")
+    btn_exch = KeyboardButton("💱 Обменники")
     btn_rules = KeyboardButton("📜 Правила")
     btn_vip = KeyboardButton("❓ VIP статус")
     keyboard = [
@@ -269,8 +269,8 @@ def game_keyboard():
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def private_keyboard():
-    btn_profile = KeyboardButton("👤 Мой профиль", style="success")
-    btn_achievements = KeyboardButton("🏅 Мои достижения", style="success")
+    btn_profile = KeyboardButton("👤 Мой профиль")
+    btn_achievements = KeyboardButton("🏅 Мои достижения")
     keyboard = [[btn_profile, btn_achievements]]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
