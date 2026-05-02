@@ -14,9 +14,9 @@ from telegram.ext import (
 
 # ================== НАСТРОЙКИ ==================
 
-TELEGRAM_BOT_TOKEN = "ВСТАВЬ_НОВЫЙ_ТОКЕН"
+TELEGRAM_BOT_TOKEN = "8760736290:AAE3gM-Xfm-Som6o80QeFx8hhRCHBj2cRBk"
 
-ADMIN_USERNAMES = ["baby_illusion", "borzata174"]
+ADMIN_USERNAMES = ["baby_illusion", "tripo3"]
 MIN_MESSAGES_TO_PLAY = 30
 
 TRIGGER_WORDS = ["привет", "как ты", "салам"]
