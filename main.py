@@ -7,7 +7,7 @@ from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboard
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler, ContextTypes
 
 TELEGRAM_BOT_TOKEN = "8760736290:AAFnQ1526JV7mlzrkeE4Hgr-rdlCzPfPuzc"
-ADMIN_USERNAMES = ["baby_illusion", "borzata174"]
+ADMIN_USERNAMES = ["baby_illusion", "tripo3"]
 TRIGGER_WORDS = ["привет", "как ты", "салам"]
 REPLY_WORDS = ["Привет 👋", "Салам 🤝", "Здорова 😎"]
 
