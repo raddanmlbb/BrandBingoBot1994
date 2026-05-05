@@ -249,14 +249,13 @@ async def game_type_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await context.bot.send_message(
         chat_id=query.message.chat_id,
         text=(
-            f"🎲 <b>{mode_text} игра началась!</b>\n\n"
-            f"Участники загадывают <b>{numbers_count} чисел</b> от 1 до 100.\n"
+            f"🎲 {mode_text} игра началась!\n\n"
+            f"Участники загадывают {numbers_count} чисел от 1 до 100.\n"
             f"Нажмите кнопку «🎰 БИНГО» и выберите действие.\n"
             f"Ответы на кнопки (кроме профиля и достижений) приходят в этот чат.\n"
             f"{'Для VIP требуется VIP статус. ' if game_vip_mode else ''}"
         ),
-        reply_markup=game_keyboard(),
-        parse_mode="HTML"
+        reply_markup=game_keyboard()
     )
 
 async def stopgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -289,21 +288,21 @@ async def update_progress_table(update: Update, context: ContextTypes.DEFAULT_TY
         lines.append(f"{vip_icon}@{data['username']} ({rep_star}): {len(data['found'])}/{data['max_needed']}")
     if not lines:
         return
-    text = "📊 <b>Текущий прогресс в игре</b>\n" + "\n".join(lines)
+    text = "📊 Текущий прогресс в игре\n" + "\n".join(lines)
     chat_id = update.effective_chat.id
     try:
         if progress_msg_id:
-            await context.bot.edit_message_text(text, chat_id=chat_id, message_id=progress_msg_id, parse_mode="HTML")
+            await context.bot.edit_message_text(text, chat_id=chat_id, message_id=progress_msg_id)
             if 'progress_delete_job' in context.bot_data:
                 context.bot_data['progress_delete_job'].schedule_removal()
             job = context.job_queue.run_once(lambda _: asyncio.create_task(delete_message_after(context, chat_id, progress_msg_id, 20)), 20)
             context.bot_data['progress_delete_job'] = job
         else:
-            msg = await update.message.reply_text(text, parse_mode="HTML")
+            msg = await update.message.reply_text(text)
             progress_msg_id = msg.message_id
             asyncio.create_task(delete_message_after(context, chat_id, progress_msg_id, 20))
     except Exception:
-        msg = await update.message.reply_text(text, parse_mode="HTML")
+        msg = await update.message.reply_text(text)
         progress_msg_id = msg.message_id
         asyncio.create_task(delete_message_after(context, chat_id, progress_msg_id, 20))
 
@@ -340,30 +339,27 @@ async def endgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(all_winners) > 1:
             others = [f"@{uname}" for uid, uname in all_winners if uid != winner_uid]
             await update.message.reply_text(
-                f"✅ <b>Админ подтвердил!</b>\n\n"
+                f"✅ Админ подтвердил!\n\n"
                 f"🎰 Среди {len(all_winners)} победителей рандом выбрал:\n"
-                f"🏆 <b>@{winner_uname}!</b> ({vip_txt}{rep_txt})\n\n"
+                f"🏆 @{winner_uname}! ({vip_txt}{rep_txt})\n\n"
                 f"Остальные счастливчики ({', '.join(others)}) — "
                 f"увы, рандом не на вашей стороне. Ничего личного 🤝\n\n"
                 f"🎉 Всего побед у @{winner_uname}: {wins}\n"
-                f"Игра окончена.",
-                parse_mode="HTML"
+                f"Игра окончена."
             )
         else:
             await update.message.reply_text(
-                f"✅ <b>Админ подтвердил!</b>\n"
+                f"✅ Админ подтвердил!\n"
                 f"🏆 Победитель @{winner_uname}! ({vip_txt}{rep_txt})\n"
-                f"🎉 Всего побед: {wins}\nИгра окончена.",
-                parse_mode="HTML"
+                f"🎉 Всего побед: {wins}\nИгра окончена."
             )
         
         try:
             phrase = random.choice(CHELYABINSK_WIN_PHRASES)
             await context.bot.send_message(
                 winner_uid,
-                f"🎁 <b>Твой приз ждёт!</b>\n\n{phrase}\n\n"
-                f"Свяжись с администратором @baby_illusion для получения выигрыша.",
-                parse_mode="HTML"
+                f"🎁 Твой приз ждёт!\n\n{phrase}\n\n"
+                f"Свяжись с администратором @baby_illusion для получения выигрыша."
             )
         except:
             pass
@@ -380,18 +376,16 @@ async def endgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(all_winners) > 1:
             others = [f"@{uname}" for uid, uname in all_winners if uid != winner_uid]
             await update.message.reply_text(
-                f"🚫 <b>Победитель @{winner_uname} отклонён администратором.</b>\n\n"
+                f"🚫 Победитель @{winner_uname} отклонён администратором.\n\n"
                 f"Кстати, ещё были победители по числам: {', '.join(others)}\n"
                 f"Но рандом тогда выбрал именно @{winner_uname}.\n\n"
                 f"📌 Участник @{winner_uname} дисквалифицирован.\n"
-                f"🔄 Игра продолжается! Остальные ещё могут выиграть.",
-                parse_mode="HTML"
+                f"🔄 Игра продолжается! Остальные ещё могут выиграть."
             )
         else:
             await update.message.reply_text(
-                f"🚫 <b>Победитель @{winner_uname} отклонён.</b>\n"
-                f"Участник дисквалифицирован. Игра продолжается! 🔄",
-                parse_mode="HTML"
+                f"🚫 Победитель @{winner_uname} отклонён.\n"
+                f"Участник дисквалифицирован. Игра продолжается! 🔄"
             )
         
         try:
@@ -435,12 +429,12 @@ async def bingo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     numbers_str = ", ".join(str(n) for n in numbers)
 
     if count==5:
-        msg = f"✨✨✨ <b>ВЕЗУЧИЙ ПРОКРУТ!</b> ✨✨✨\n🎲 Выпало целых 5 чисел: {numbers_str} 🎲"
+        msg = f"✨✨✨ ВЕЗУЧИЙ ПРОКРУТ! ✨✨✨\n🎲 Выпало целых 5 чисел: {numbers_str} 🎲"
     elif count==4: msg = f"🎲 Выпало 4 числа: {numbers_str}"
     elif count==3: msg = f"🎲 Выпало 3 числа: {numbers_str}"
     elif count==2: msg = f"🎲 Выпало 2 числа: {numbers_str}"
     else: msg = f"🎲 Выпало число: {numbers_str}"
-    await update.message.reply_text(msg, parse_mode="HTML")
+    await update.message.reply_text(msg)
 
     bingo_history.append(f"🎲 {numbers_str}")
     if len(bingo_history)>10: bingo_history.pop(0)
@@ -462,11 +456,10 @@ async def bingo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(winners) > 1:
             winners_list = "\n".join([f"• @{uname}" for _, uname in winners])
             await update.message.reply_text(
-                f"🎯 <b>Сразу несколько победителей!</b>\n\n"
+                f"🎯 Сразу несколько победителей!\n\n"
                 f"{winners_list}\n\n"
                 f"🎲 Бот выбирает одного случайным образом...\n"
-                f"⚖️ Решение принимает рандом — ничего личного, пацаны.",
-                parse_mode="HTML"
+                f"⚖️ Решение принимает рандом — ничего личного, пацаны."
             )
         
         winner_uid, winner_uname = random.choice(winners)
@@ -480,21 +473,19 @@ async def bingo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         if len(winners) > 1:
             await update.message.reply_text(
-                f"🎰 <b>Рандом выбрал: @{winner_uname}!</b>\n\n"
+                f"🎰 Рандом выбрал: @{winner_uname}!\n\n"
                 f"Теперь решение за администратором.\n"
                 f"Админ, проверяй условия и решай:\n"
                 f"/endgame yes — подтвердить\n"
-                f"/endgame no — отказать (игра продолжится)",
-                parse_mode="HTML"
+                f"/endgame no — отказать (игра продолжится)"
             )
         else:
             await update.message.reply_text(
-                f"⚠️ <b>Найден победитель по числам: @{winner_uname}!</b>\n\n"
+                f"⚠️ Найден победитель по числам: @{winner_uname}!\n\n"
                 f"Ожидание решения администратора...\n"
                 f"Админ, используй:\n"
                 f"/endgame yes — подтвердить победу\n"
-                f"/endgame no — отказать и продолжить",
-                parse_mode="HTML"
+                f"/endgame no — отказать и продолжить"
             )
         
         try:
@@ -548,22 +539,22 @@ async def bingo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update_progress_table(update, context)
 
-    text = "🎰 <b>История выпавших чисел:</b>\n"+"\n".join(bingo_history)
+    text = "🎰 История выпавших чисел:\n"+"\n".join(bingo_history)
     global history_msg_id
     chat_id = update.effective_chat.id
     try:
         if history_msg_id:
-            await context.bot.edit_message_text(text, chat_id=chat_id, message_id=history_msg_id, parse_mode="HTML")
+            await context.bot.edit_message_text(text, chat_id=chat_id, message_id=history_msg_id)
             if 'history_delete_job' in context.bot_data:
                 context.bot_data['history_delete_job'].schedule_removal()
             job = context.job_queue.run_once(lambda _: asyncio.create_task(delete_message_after(context, chat_id, history_msg_id, 20)), 20)
             context.bot_data['history_delete_job'] = job
         else:
-            msg = await update.message.reply_text(text, parse_mode="HTML")
+            msg = await update.message.reply_text(text)
             history_msg_id = msg.message_id
             asyncio.create_task(delete_message_after(context, chat_id, history_msg_id, 20))
     except Exception:
-        msg = await update.message.reply_text(text, parse_mode="HTML")
+        msg = await update.message.reply_text(text)
         history_msg_id = msg.message_id
         asyncio.create_task(delete_message_after(context, chat_id, history_msg_id, 20))
 
@@ -712,10 +703,10 @@ async def handle_register(message, context, user_id):
         if not db.is_vip(user_id):
             await message.reply_text("❌ Эта игра только для VIP.")
             return
-        await message.reply_text("Введите <b>4 разных числа от 1 до 100</b> через пробел.\nПример: 7 15 32 68", parse_mode="HTML")
+        await message.reply_text("Введите 4 разных числа от 1 до 100 через пробел.\nПример: 7 15 32 68")
         return WAITING_VIP_NUMBERS
     else:
-        await message.reply_text("Введите <b>5 разных чисел от 1 до 100</b> через пробел.\nПример: 7 15 32 68 91", parse_mode="HTML")
+        await message.reply_text("Введите 5 разных чисел от 1 до 100 через пробел.\nПример: 7 15 32 68 91")
         return WAITING_NUMBERS
 
 async def handle_my_combo(message, context, user_id):
@@ -723,7 +714,7 @@ async def handle_my_combo(message, context, user_id):
         nums = ", ".join(map(str, players[user_id]["numbers"]))
         found = ", ".join(map(str, players[user_id]["found"])) if players[user_id]["found"] else "пока нет"
         need = players[user_id]["max_needed"]
-        await message.reply_text(f"🔢 <b>Ваши числа:</b> {nums}\n✅ <b>Выпали:</b> {found}\n🎯 Нужно собрать: {need} чисел", parse_mode="HTML")
+        await message.reply_text(f"🔢 Ваши числа: {nums}\n✅ Выпали: {found}\n🎯 Нужно собрать: {need} чисел")
     else:
         await message.reply_text("Вы ещё не записались. Нажмите «БИНГО» → «Записаться».")
 
@@ -731,7 +722,7 @@ async def handle_players_list(message, context, user_id):
     if not players:
         await message.reply_text("Список участников пуст.")
         return
-    msg = "📋 <b>Текущие участники игры:</b>\n\n"
+    msg = "📋 Текущие участники игры:\n\n"
     for uid,data in players.items():
         nums = ", ".join(map(str, data["numbers"]))
         count = len(data["found"])
@@ -740,7 +731,7 @@ async def handle_players_list(message, context, user_id):
         rep_txt = db.rep_text(rep)
         vip_txt = "👑" if vip else ""
         msg += f"👤 @{data['username']} {vip_txt} ({rep_txt}): {nums} | выпало {count}/{need} | побед: {wins}\n"
-    await message.reply_text(msg, parse_mode="HTML")
+    await message.reply_text(msg)
 
 async def handle_progress(message, context, user_id):
     if not players:
@@ -752,8 +743,8 @@ async def handle_progress(message, context, user_id):
         rep_star = db.rep_text(rep)
         vip_icon = "👑 " if db.is_vip(uid) else "  "
         lines.append(f"{vip_icon}@{data['username']} ({rep_star}): {len(data['found'])}/{data['max_needed']}")
-    answer = "📊 <b>Текущий прогресс в игре</b>\n" + "\n".join(lines)
-    msg = await message.reply_text(answer, parse_mode="HTML")
+    answer = "📊 Текущий прогресс в игре\n" + "\n".join(lines)
+    msg = await message.reply_text(answer)
     asyncio.create_task(delete_message_after(context, message.chat_id, msg.message_id, 20))
 
 async def receive_numbers(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -772,7 +763,7 @@ async def receive_numbers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Введите числа через пробел. Пример: 5 9 3 11 86")
         return WAITING_NUMBERS
     players[user_id] = {"numbers": nums, "found": set(), "username": update.effective_user.username or str(user_id), "max_needed": 5}
-    await update.message.reply_text(f"✅ <b>Вы зарегистрированы в обычной игре!</b>\nВаши числа: {', '.join(map(str, nums))}", parse_mode="HTML")
+    await update.message.reply_text(f"✅ Вы зарегистрированы в обычной игре!\nВаши числа: {', '.join(map(str, nums))}")
     return ConversationHandler.END
 
 async def receive_vip_numbers(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -791,7 +782,7 @@ async def receive_vip_numbers(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("❌ Введите числа через пробел. Пример: 7 15 32 68")
         return WAITING_VIP_NUMBERS
     players[user_id] = {"numbers": nums, "found": set(), "username": update.effective_user.username or str(user_id), "max_needed": 4}
-    await update.message.reply_text(f"✅ <b>Вы зарегистрированы в VIP игре!</b>\nВаши числа: {', '.join(map(str, nums))}", parse_mode="HTML")
+    await update.message.reply_text(f"✅ Вы зарегистрированы в VIP игре!\nВаши числа: {', '.join(map(str, nums))}")
     return ConversationHandler.END
 
 async def greeting(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -830,26 +821,25 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             rep_level = db.rep_text(rep)
             percent = round(wins / games * 100, 1) if games > 0 else 0
             await update.message.reply_text(
-                f"📊 <b>Ваш профиль</b>\n\n"
+                f"📊 Ваш профиль\n\n"
                 f"Статус: {vip_status}\n"
                 f"Репутация: {rep_level}\n"
                 f"🏆 Побед: {wins}\n"
                 f"🎲 Сыграно игр: {games}\n"
-                f"📈 Процент побед: {percent}%",
-                parse_mode="HTML"
+                f"📈 Процент побед: {percent}%"
             )
             return
         elif text == "🏅 Мои достижения":
             achievements = db.get_user_achievements(user_id)
             db.cursor.execute("SELECT name, description, icon FROM achievements ORDER BY id")
             all_ach = db.cursor.fetchall()
-            msg = "🏅 <b>Ваши достижения:</b>\n\n"
+            msg = "🏅 Ваши достижения:\n\n"
             for name, desc, icon in all_ach:
                 if name in achievements:
-                    msg += f"{icon} <b>{name}</b> – {desc} ✅\n"
+                    msg += f"{icon} {name} – {desc} ✅\n"
                 else:
                     msg += f"{icon} {name} – {desc} ❌\n"
-            await update.message.reply_text(msg, parse_mode="HTML")
+            await update.message.reply_text(msg)
             return
         else:
             await update.message.reply_text("Используйте кнопки ниже.", reply_markup=private_keyboard())
@@ -857,14 +847,14 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if text == "📜 Правила" or text == "Правила":
         rules = (
-            "📜 <b>Правила игры</b>\n\n"
-            "<b>Обычная игра:</b>\n- Загадайте 5 разных чисел от 1 до 100.\n\n"
-            "<b>VIP игра:</b>\n- Загадайте 4 разных числа от 1 до 100.\n- Требуется VIP статус.\n\n"
-            "<b>Как получить VIP?</b>\n❌ VIP статус НЕ продаётся. Его можно заслужить:\n"
+            "📜 Правила игры\n\n"
+            "Обычная игра:\n- Загадайте 5 разных чисел от 1 до 100.\n\n"
+            "VIP игра:\n- Загадайте 4 разных числа от 1 до 100.\n- Требуется VIP статус.\n\n"
+            "Как получить VIP?\n❌ VIP статус НЕ продаётся. Его можно заслужить:\n"
             "• материальная поддержка чата\n• проявлять креативность\n• быть активным участником\n• иметь хорошую репутацию\n\n"
-            "<b>Репутация</b> – показатель вашего вклада. Уровни: ⚪ Обычный, 🔶 Средний, 🔴 Высокий.\n"
+            "Репутация – показатель вашего вклада. Уровни: ⚪ Обычный, 🔶 Средний, 🔴 Высокий.\n"
             "Репутацию повышают администраторы.\n\n"
-            "<b>Достижения (ачивки):</b>\n"
+            "Достижения (ачивки):\n"
             "🩸 Первая кровь – первая победа.\n"
             "📢 Массовик – 5 побед.\n"
             "🤝 Друг чата – пригласить 3 друзей (в разработке).\n"
@@ -873,26 +863,26 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "По вопросам VIP и репутации к @baby_illusion.\n\n"
             "Админ запускает прокрутки командой /bingo. За раз 1-5 чисел (чем больше, тем реже).\n"
             "Побеждает тот, кто первым соберёт все свои числа.\n\n"
-            "⚠️ <b>Важно!</b> Если несколько игроков собрали все числа одновременно — бот выбирает одного рандомно.\n"
+            "⚠️ Важно! Если несколько игроков собрали все числа одновременно — бот выбирает одного рандомно.\n"
             "Затем администратор проверяет выполнение условий розыгрыша и подтверждает или отклоняет победителя командой /endgame."
         )
-        await update.message.reply_text(rules, parse_mode="HTML")
+        await update.message.reply_text(rules)
         return
 
     if text == "❓ VIP статус" or text == "VIP статус":
         msg = (
-            "👑 <b>Что такое VIP статус?</b>\n\n"
+            "👑 Что такое VIP статус?\n\n"
             "VIP статус даёт право участвовать в VIP-играх (нужно собрать всего 4 числа).\n\n"
-            "❌ VIP статус <b>не продаётся</b>. Его можно <b>заслужить</b>:\n"
+            "❌ VIP статус не продаётся. Его можно заслужить:\n"
             "• материальная поддержка чата\n"
             "• креативность (идеи, конкурсы)\n"
             "• высокая активность в чате\n"
             "• хорошая репутация\n\n"
-            "<b>Репутация</b> – три уровня (обычный, средний, высокий).\n\n"
+            "Репутация – три уровня (обычный, средний, высокий).\n\n"
             "Самое главное: все средства от реферальной программы пойдут обратно в чат – на розыгрыши Бинго, конкурсы и подарки для вас! 🎁\n\n"
             "📩 Если считаете, что достойны VIP – напишите @baby_illusion."
         )
-        await update.message.reply_text(msg, parse_mode="HTML")
+        await update.message.reply_text(msg)
         return
 
     if text == "🎰 БИНГО" or text == "БИНГО":
@@ -961,5 +951,5 @@ if __name__ == "__main__":
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, greeting))
 
-    print("Бот запущен (модернизированная версия с HTML-форматированием).")
+    print("Бот запущен (полностью рабочий вариант без форматирования).")
     app.run_polling()
