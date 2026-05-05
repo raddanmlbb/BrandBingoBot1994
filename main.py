@@ -6,9 +6,8 @@ from datetime import datetime
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, BotCommand
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ConversationHandler, CallbackQueryHandler, ContextTypes
 
-TELEGRAM_BOT_TOKEN = "8760736290:AAE3gM-Xfm-Som6o80QeFx8hhRCHBj2cRBk"
-
-ADMIN_USERNAMES = ["baby_illusion", "tripo3"]
+TELEGRAM_BOT_TOKEN = "8760736290:AAFnQ1526JV7mlzrkeE4Hgr-rdlCzPfPuzc"
+ADMIN_USERNAMES = ["baby_illusion", "borzata174"]
 TRIGGER_WORDS = ["привет", "как ты", "салам"]
 REPLY_WORDS = ["Привет 👋", "Салам 🤝", "Здорова 😎"]
 
@@ -17,12 +16,15 @@ WAITING_VIP_NUMBERS = 2
 
 CHELYABINSK_WIN_PHRASES = [
     "✅ Чётко, братан! Ты сегодня главный на районе. Так держать, пацан!",
+    "💰 Бабки в карман, тачку на ход! Ты реально порвал эту бингу. Поздравляю, авторитет!",
     "🏧 По-честному намутил победу. Респект тебе, бро! Жму руку.",
     "🦾 Челябинский хардкор! Никто не ожидал, а ты выиграл. Ты красавчик!",
     "🍻 Гулять сегодня – твой выход. Победа за тобой, пацан! Уважаю!",
     "🎰 Как в казино на Труда: рискнул – и вот ты с призом. Горжусь, брат.",
+    "🚬 Сигару в зубы, пацан! Ты сделал это. Реальный олд-мани.",
     "💎 Твоя победа – как слиток золота. Тяжело, но дорого. Прими поздравления!",
     "👔 Костюм от Brioni, туфли от Berluti – а ты выиграл. Шик, блеск, красота!",
+    "🥃 Виски, сигара, победа. Живи как настоящий мафиози!"
 ]
 
 class Database:
@@ -49,20 +51,6 @@ class Database:
                 user_id INTEGER PRIMARY KEY,
                 banned_at TEXT,
                 reason TEXT
-            )
-        """)
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS shops (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE,
-                username TEXT
-            )
-        """)
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS exchangers (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT UNIQUE,
-                username TEXT
             )
         """)
         self.cursor.execute("""
@@ -182,40 +170,6 @@ class Database:
         row = self.cursor.fetchone()
         return row if row else (0,0,0,0)
 
-    def get_shops(self):
-        self.cursor.execute("SELECT name, username FROM shops")
-        return self.cursor.fetchall()
-
-    def add_shop(self, name, username):
-        try:
-            self.cursor.execute("INSERT INTO shops (name, username) VALUES (?, ?)", (name, username))
-            self.conn.commit()
-            return True
-        except sqlite3.IntegrityError:
-            return False
-
-    def delete_shop(self, name):
-        self.cursor.execute("DELETE FROM shops WHERE name = ?", (name,))
-        self.conn.commit()
-        return self.cursor.rowcount>0
-
-    def get_exchangers(self):
-        self.cursor.execute("SELECT name, username FROM exchangers")
-        return self.cursor.fetchall()
-
-    def add_exchanger(self, name, username):
-        try:
-            self.cursor.execute("INSERT INTO exchangers (name, username) VALUES (?, ?)", (name, username))
-            self.conn.commit()
-            return True
-        except sqlite3.IntegrityError:
-            return False
-
-    def delete_exchanger(self, name):
-        self.cursor.execute("DELETE FROM exchangers WHERE name = ?", (name,))
-        self.conn.commit()
-        return self.cursor.rowcount>0
-
 db = Database()
 
 players = {}
@@ -227,20 +181,16 @@ history_msg_id = None
 progress_msg_id = None
 
 def permanent_keyboard():
-    btn_shop = KeyboardButton("🛍️ Магазины")
-    btn_exch = KeyboardButton("💱 Обменники")
     btn_rules = KeyboardButton("📜 Правила")
     btn_vip = KeyboardButton("❓ VIP статус")
-    keyboard = [[btn_shop, btn_exch], [btn_rules, btn_vip]]
+    keyboard = [[btn_rules, btn_vip]]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def game_keyboard():
     btn_bingo = KeyboardButton("🎰 БИНГО")
-    btn_shop = KeyboardButton("🛍️ Магазины")
-    btn_exch = KeyboardButton("💱 Обменники")
     btn_rules = KeyboardButton("📜 Правила")
     btn_vip = KeyboardButton("❓ VIP статус")
-    keyboard = [[btn_bingo, btn_shop], [btn_exch, btn_rules], [btn_vip]]
+    keyboard = [[btn_bingo], [btn_rules, btn_vip]]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def private_keyboard():
@@ -385,7 +335,6 @@ async def bingo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for uid, data in players.items():
             if num in data["numbers"] and num not in data["found"]:
                 data["found"].add(num)
-                # уведомление в личку (остаётся как есть)
                 try:
                     await context.bot.send_message(uid, f"✅ Ваше число {num} выпало! Осталось {data['max_needed'] - len(data['found'])}.")
                 except:
@@ -558,130 +507,27 @@ async def unban(update, context):
 async def getid(update, context):
     await update.message.reply_text(f"Ваш ID: {update.effective_user.id}")
 
-async def add_shop(update, context):
-    if update.effective_user.username.lower() not in [a.lower() for a in ADMIN_USERNAMES]:
-        await update.message.reply_text("❌ Только администратор.")
-        return
-    args=context.args
-    if len(args)<2:
-        await update.message.reply_text("Использование: /add_shop <название> @username")
-        return
-    name=args[0]
-    username=args[1].lstrip('@')
-    if db.add_shop(name, username):
-        await update.message.reply_text(f"✅ Магазин «{name}» (@{username}) добавлен.")
-    else:
-        await update.message.reply_text("❌ Магазин с таким названием уже существует.")
-
-async def del_shop(update, context):
-    if update.effective_user.username.lower() not in [a.lower() for a in ADMIN_USERNAMES]:
-        await update.message.reply_text("❌ Только администратор.")
-        return
-    if not context.args:
-        await update.message.reply_text("Использование: /del_shop <название>")
-        return
-    name=" ".join(context.args)
-    if db.delete_shop(name):
-        await update.message.reply_text(f"✅ Магазин «{name}» удалён.")
-    else:
-        await update.message.reply_text("❌ Магазин не найден.")
-
-async def list_shops(update, context):
-    if update.effective_user.username.lower() not in [a.lower() for a in ADMIN_USERNAMES]:
-        await update.message.reply_text("❌ Только администратор.")
-        return
-    shops=db.get_shops()
-    if not shops:
-        await update.message.reply_text("Список магазинов пуст.")
-    else:
-        msg="📋 **Список магазинов:**\n"
-        for name,uname in shops: msg+=f"• {name} — @{uname}\n"
-        await update.message.reply_text(msg, parse_mode="Markdown")
-
-async def add_exch(update, context):
-    if update.effective_user.username.lower() not in [a.lower() for a in ADMIN_USERNAMES]:
-        await update.message.reply_text("❌ Только администратор.")
-        return
-    args=context.args
-    if len(args)<2:
-        await update.message.reply_text("Использование: /add_exch <название> @username")
-        return
-    name=args[0]
-    username=args[1].lstrip('@')
-    if db.add_exchanger(name, username):
-        await update.message.reply_text(f"✅ Обменник «{name}» (@{username}) добавлен.")
-    else:
-        await update.message.reply_text("❌ Обменник с таким названием уже существует.")
-
-async def del_exch(update, context):
-    if update.effective_user.username.lower() not in [a.lower() for a in ADMIN_USERNAMES]:
-        await update.message.reply_text("❌ Только администратор.")
-        return
-    if not context.args:
-        await update.message.reply_text("Использование: /del_exch <название>")
-        return
-    name=" ".join(context.args)
-    if db.delete_exchanger(name):
-        await update.message.reply_text(f"✅ Обменник «{name}» удалён.")
-    else:
-        await update.message.reply_text("❌ Обменник не найден.")
-
-async def list_exch(update, context):
-    if update.effective_user.username.lower() not in [a.lower() for a in ADMIN_USERNAMES]:
-        await update.message.reply_text("❌ Только администратор.")
-        return
-    exch=db.get_exchangers()
-    if not exch:
-        await update.message.reply_text("Список обменников пуст.")
-    else:
-        msg="📋 **Список обменников:**\n"
-        for name,uname in exch: msg+=f"• {name} — @{uname}\n"
-        await update.message.reply_text(msg, parse_mode="Markdown")
-
-async def shops_button(update, context):
-    shops=db.get_shops()
-    if not shops:
-        await update.message.reply_text("Список магазинов пуст. Админ может добавить через /add_shop")
-        return
-    keyboard=[[InlineKeyboardButton(name, callback_data=f"shop_{username}")] for name,username in shops]
-    await update.message.reply_text("Выберите магазин:", reply_markup=InlineKeyboardMarkup(keyboard))
-
-async def exchangers_button(update, context):
-    exch=db.get_exchangers()
-    if not exch:
-        await update.message.reply_text("Список обменников пуст. Админ может добавить через /add_exch")
-        return
-    keyboard=[[InlineKeyboardButton(name, callback_data=f"exch_{username}")] for name,username in exch]
-    await update.message.reply_text("Выберите обменник:", reply_markup=InlineKeyboardMarkup(keyboard))
-
 async def inline_callback(update, context):
-    query=update.callback_query
+    query = update.callback_query
     await query.answer()
-    data=query.data
-    if data.startswith("shop_"):
-        username=data[5:]
-        await query.edit_message_text(f"📦 Свяжитесь с продавцом: @{username}")
-    elif data.startswith("exch_"):
-        username=data[5:]
-        await query.edit_message_text(f"💱 Свяжитесь с обменником: @{username}")
-    elif data in ("game_normal","game_vip"):
+    data = query.data
+    if data in ("game_normal","game_vip"):
         await game_type_callback(update, context)
     elif data in ("register", "my_combo", "players_list", "progress"):
-        user_id=query.from_user.id
+        user_id = query.from_user.id
         await query.message.delete()
         if not game_active:
             await query.message.reply_text("Игра не активна.")
             return
-        if data=="register":
+        if data == "register":
             await handle_register(query.message, context, user_id)
-        elif data=="my_combo":
+        elif data == "my_combo":
             await handle_my_combo(query.message, context, user_id)
-        elif data=="players_list":
+        elif data == "players_list":
             await handle_players_list(query.message, context, user_id)
-        elif data=="progress":
+        elif data == "progress":
             await handle_progress(query.message, context, user_id)
 
-# Все хэндлеры теперь работают в группе, кроме профиля и достижений (ЛС)
 async def handle_register(message, context, user_id):
     if user_id in players:
         await message.reply_text("Вы уже зарегистрированы в текущей игре.")
@@ -721,8 +567,8 @@ async def handle_players_list(message, context, user_id):
         count = len(data["found"])
         need = data["max_needed"]
         wins,_,vip,rep = db.get_stats(uid)
-        rep_txt=db.rep_text(rep)
-        vip_txt="👑" if vip else ""
+        rep_txt = db.rep_text(rep)
+        vip_txt = "👑" if vip else ""
         msg += f"👤 @{data['username']} {vip_txt} ({rep_txt}): {nums} | выпало {count}/{need} | побед: {wins}\n"
     await message.reply_text(msg, parse_mode="Markdown")
 
@@ -732,9 +578,9 @@ async def handle_progress(message, context, user_id):
         return
     lines = []
     for uid,data in players.items():
-        rep=db.get_reputation(uid)
-        rep_star=db.rep_text(rep)
-        vip_icon="👑 " if db.is_vip(uid) else "  "
+        rep = db.get_reputation(uid)
+        rep_star = db.rep_text(rep)
+        vip_icon = "👑 " if db.is_vip(uid) else "  "
         lines.append(f"{vip_icon}@{data['username']} ({rep_star}): {len(data['found'])}/{data['max_needed']}")
     answer = "📊 **Текущий прогресс в игре**\n" + "\n".join(lines)
     msg = await message.reply_text(answer, parse_mode="Markdown")
@@ -839,7 +685,6 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Используйте кнопки ниже.", reply_markup=private_keyboard())
             return
 
-    # ГРУППА
     if text == "📜 Правила" or text == "Правила":
         rules = (
             "📜 **Правила игры**\n\n"
@@ -878,14 +723,6 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(msg, parse_mode="Markdown")
         return
 
-    if text == "🛍️ Магазины" or text == "Магазины":
-        await shops_button(update, context)
-        return
-
-    if text == "💱 Обменники" or text == "Обменники":
-        await exchangers_button(update, context)
-        return
-
     if text == "🎰 БИНГО" or text == "БИНГО":
         if not game_active:
             await update.message.reply_text("Игра не активна. Администратор должен дать /startgame.")
@@ -912,12 +749,6 @@ async def set_commands(app):
         BotCommand("remove_vip", "(админ) Снять VIP"),
         BotCommand("set_reputation", "(админ) Установить репутацию (0,1,2)"),
         BotCommand("add_donation", "(админ) Засчитать спонсорство игры"),
-        BotCommand("add_shop", "(админ) Добавить магазин"),
-        BotCommand("del_shop", "(админ) Удалить магазин"),
-        BotCommand("list_shops", "(админ) Список магазинов"),
-        BotCommand("add_exch", "(админ) Добавить обменник"),
-        BotCommand("del_exch", "(админ) Удалить обменник"),
-        BotCommand("list_exch", "(админ) Список обменников"),
     ])
 
 if __name__ == "__main__":
@@ -937,14 +768,8 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("remove_vip", remove_vip))
     app.add_handler(CommandHandler("set_reputation", set_reputation))
     app.add_handler(CommandHandler("add_donation", add_donation))
-    app.add_handler(CommandHandler("add_shop", add_shop))
-    app.add_handler(CommandHandler("del_shop", del_shop))
-    app.add_handler(CommandHandler("list_shops", list_shops))
-    app.add_handler(CommandHandler("add_exch", add_exch))
-    app.add_handler(CommandHandler("del_exch", del_exch))
-    app.add_handler(CommandHandler("list_exch", list_exch))
 
-    app.add_handler(CallbackQueryHandler(inline_callback, pattern="^(shop_|exch_|game_|register|my_combo|players_list|progress)"))
+    app.add_handler(CallbackQueryHandler(inline_callback, pattern="^(game_|register|my_combo|players_list|progress)"))
 
     conv_handler = ConversationHandler(
         entry_points=[MessageHandler(filters.Regex("^✍️ Записаться$"), handle_buttons)],
@@ -959,5 +784,5 @@ if __name__ == "__main__":
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_buttons))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, greeting))
 
-    print("Бот запущен. Регистрация и все ответы – в чате. В ЛС только профиль и достижения.")
+    print("Бот запущен (игровая версия без магазинов и обменников).")
     app.run_polling()
